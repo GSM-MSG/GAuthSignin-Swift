@@ -1,6 +1,6 @@
 import Foundation
 
-struct TokenDTO: Equatable, Decodable {
-    let accessToken: String
-    let refreshToken: String
+public struct TokenDTO: Equatable, Decodable {
+    public let accessToken: String
+    public let refreshToken: String
 }

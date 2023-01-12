@@ -1,13 +1,11 @@
 import Foundation
 
 enum UserAPIEnum {
-    case code(AuthInfoDTO)
-    case token(ServiceInfoDTO)
-    case refresh
+    case user(accessToken: String)
 }
 
 struct UserAPI {
-    let baseURL: String = "https://server.gauth.co.kr/oauth/"
+    let baseURL: String = "https://open.gauth.co.kr/"
     let user: UserAPIEnum
 
     init(user: UserAPIEnum) {
@@ -16,54 +14,37 @@ struct UserAPI {
 
     var urlPath: String {
         switch user {
-        case .code:
-            return "code"
-        case .token:
-            return "token"
-        case .refresh:
-            return "refresh"
+        case .user:
+            return "user"
         }
     }
-    var json: [String: Any] {
+    var token: String {
         switch user {
-        case let .code(req):
-            return [
-                "email": req.email,
-                "passwrod": req.password
-            ]
-        case let .token(req):
-            return [
-                "code" : req.code,
-                "clientId" : req.clientId,
-                "clientSecret" : req.clientSecret,
-                "redirectUri" : req.redirectUri
-            ]
-        case .refresh:
-            return [:]
+        case let .user(accessToken):
+            return accessToken
         }
     }
 
     @available(iOS 13.0, *)
-    func getToken() async -> TokenDTO {
-        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+    func authorization() async -> UserInfoDTO {
         var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.httpBody = jsonData
-        let token = try? await task(urlRequest: urlRequest)
-        return token ?? .init(accessToken: "123", refreshToken: "13")
+        urlRequest.httpMethod = "GET"
+        urlRequest.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        let token = try? await authorizationTask(urlRequest: urlRequest)
+        return token ?? .init(email: "", gender: "", role: "")
     }
 
-    func task(urlRequest: URLRequest) async throws -> TokenDTO {
+    func authorizationTask(urlRequest: URLRequest) async throws -> UserInfoDTO {
         if #available(iOS 13.0, *) {
             let (data, response) = try await URLSession.shared.data(for: urlRequest)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print((response as? HTTPURLResponse)?.statusCode)
                 throw GAuthError.unknown
             }
-            let res = try JSONDecoder().decode(TokenDTO.self, from: data)
+            let res = try JSONDecoder().decode(UserInfoDTO.self, from: data)
             return res
         } else {
-            return .init(accessToken: "", refreshToken: "")
+            return .init(email: "", gender: "", role: "")
         }
     }
 }

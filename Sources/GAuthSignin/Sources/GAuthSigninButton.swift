@@ -5,8 +5,7 @@ open class GAuthSigninButton: UIView {
     // MARK: - Properties
     private var client: String = ""
     private var redirect_url: String = ""
-    private let gauth: GAuth = GAuth()
-
+    private var code: String = ""
     private var button = UIButton(type: .custom)
     private var text: String?
     private struct Defaults {
@@ -101,7 +100,7 @@ open class GAuthSigninButton: UIView {
         let vc = self.getCurrentViewController() ?? nil
         let webView = WebViewController(client: client, redirect_url: redirect_url)
         webView.completionHandler = { code in
-            self.gauth.getCode(code: code)
+            self.code = code
         }
         vc?.present(webView, animated: true)
     }

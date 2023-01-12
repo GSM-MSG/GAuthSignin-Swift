@@ -55,7 +55,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         let urlString = navigationAction.request.url?.absoluteString ?? ""
         if urlString.contains("code=") {
             completionHandler?(urlString.components(separatedBy: "code=")[1])
-            dismiss(animated: true)
         }
         decisionHandler(.allow)
     }
