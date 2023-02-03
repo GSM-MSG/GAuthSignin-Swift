@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 enum OAuthEnum {
     case code(AuthInfoDTO)
@@ -6,6 +7,7 @@ enum OAuthEnum {
     case refresh(refreshToken: String)
 }
 
+@available(iOS 13.0, *)
 struct OAuthAPI {
     let baseURL: String = "https://server.gauth.co.kr/oauth/"
     let user: OAuthEnum
@@ -48,34 +50,38 @@ struct OAuthAPI {
             return ""
         }
     }
-
-    @available(iOS 13.0, *)
-    func reissuance() async -> TokenDTO {
-//        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
-        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
-        urlRequest.httpMethod = "PATCH"
-//        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("Bearer " + token, forHTTPHeaderField: "refreshToken")
-        let token = try? await reissuanceTask(urlRequest: urlRequest)
-        return token ?? .init(accessToken: "", refreshToken: "")
+    var httpMethod: String {
+        switch user {
+        case .token, .code:
+            return "POST"
+        case .refresh:
+            return "PATCH"
+        }
     }
 
-    @available(iOS 13.0, *)
+    func reissuance() async -> TokenDTO {
+        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = httpMethod
+        urlRequest.httpBody = jsonData
+        urlRequest.setValue("Bearer " + token, forHTTPHeaderField: "refreshToken")
+        return .init(accessToken: "", refreshToken: "")
+    }
+
     func getCode() async -> String {
         let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
         var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
-        urlRequest.httpMethod = "POST"
+        urlRequest.httpMethod = httpMethod
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = jsonData
         let code = try? await codeTask(urlRequest: urlRequest)
         return code ?? ""
     }
 
-    @available(iOS 13.0, *)
     func getToken() async -> TokenDTO {
         let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
         var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
-        urlRequest.httpMethod = "POST"
+        urlRequest.httpMethod = httpMethod
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = jsonData
         let token = try? await tokenTask(urlRequest: urlRequest)
@@ -83,46 +89,128 @@ struct OAuthAPI {
     }
 
     func tokenTask(urlRequest: URLRequest) async throws -> TokenDTO {
-        if #available(iOS 13.0, *) {
-            let (data, response) = try await URLSession.shared.data(for: urlRequest)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                throw GAuthError.unknown
-            }
-            let res = try JSONDecoder().decode(TokenDTO.self, from: data)
-            return res
-        } else {
-            return .init(accessToken: "", refreshToken: "")
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw GAuthError.unknown
         }
+        let res = try JSONDecoder().decode(TokenDTO.self, from: data)
+        return res
     }
 
     func codeTask(urlRequest: URLRequest) async throws -> String {
-        if #available(iOS 13.0, *) {
-            let (data, response) = try await URLSession.shared.data(for: urlRequest)
-            guard let httpResponse = response as? HTTPURLResponse, (200..<300) ~= httpResponse.statusCode else {
-                throw GAuthError.unknown
-            }
-            var codes: String = ""
-            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String : Any] {
-                if let name = json["code"] as? String {
-                    codes = name
-                }
-            }
-            return codes
-        } else {
-            return ""
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        guard let httpResponse = response as? HTTPURLResponse, (200..<300) ~= httpResponse.statusCode else {
+            throw GAuthError.unknown
         }
+        var codes: String = ""
+        if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String : Any] {
+            if let name = json["code"] as? String {
+                codes = name
+            }
+        }
+        return codes
     }
 
     func reissuanceTask(urlRequest: URLRequest) async throws -> TokenDTO {
-        if #available(iOS 13.0, *) {
-            let (data, response) = try await URLSession.shared.data(for: urlRequest)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                throw GAuthError.unknown
-            }
-            let res = try JSONDecoder().decode(TokenDTO.self, from: data)
-            return res
-        } else {
-            return .init(accessToken: "", refreshToken: "")
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw GAuthError.unknown
         }
+        let res = try JSONDecoder().decode(TokenDTO.self, from: data)
+        return res
+    }
+
+    func reissuance() -> AnyPublisher<TokenDTO, Error> {
+        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = httpMethod
+        urlRequest.httpBody = jsonData
+        urlRequest.setValue("Bearer " + token, forHTTPHeaderField: "refreshToken")
+        return reissuanceTask(urlRequest: urlRequest)
+    }
+
+    func getCode() -> AnyPublisher<String, Error> {
+        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = httpMethod
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = jsonData
+        return codeTask(urlRequest: urlRequest)
+    }
+
+    func getToken() -> AnyPublisher<TokenDTO, Error> {
+        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = httpMethod
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = jsonData
+        return tokenTask(urlRequest: urlRequest)
+    }
+
+    func reissuanceTask(urlRequest: URLRequest) -> AnyPublisher<TokenDTO, Error> {
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .mapError { error -> Error in
+                return GAuthError.unknown
+            }
+            .tryMap { (data, response) -> (data: Data, response: URLResponse) in
+                guard let urlResponse = response as? HTTPURLResponse else {
+                    throw GAuthError.unknown
+                }
+                if (200..<300) ~= urlResponse.statusCode {
+                }
+                else {
+                    print(urlResponse.statusCode)
+                }
+                return (data, response)
+            }
+            .map(\.data)
+            .decode(type: TokenDTO.self, decoder: JSONDecoder())
+            .eraseToAnyPublisher()
+    }
+
+    func tokenTask(urlRequest: URLRequest) -> AnyPublisher<TokenDTO, Error> {
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .mapError { error -> Error in
+                return GAuthError.unknown
+            }
+            .tryMap { (data, response) -> (data: Data, response: URLResponse) in
+                guard let urlResponse = response as? HTTPURLResponse else {
+                    throw GAuthError.unknown
+                }
+                if (200..<300) ~= urlResponse.statusCode {
+                }
+                else {
+                    print(urlResponse.statusCode)
+                }
+                return (data, response)
+            }
+            .map(\.data)
+            .decode(type: TokenDTO.self, decoder: JSONDecoder())
+            .eraseToAnyPublisher()
+    }
+
+    func codeTask(urlRequest: URLRequest) -> AnyPublisher<String, Error> {
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .mapError { error -> Error in
+                return GAuthError.unknown
+            }
+            .tryMap { (data, response) -> String in
+                guard let urlResponse = response as? HTTPURLResponse else {
+                    throw GAuthError.unknown
+                }
+                if (200..<300) ~= urlResponse.statusCode {
+                }
+                else {
+                    print(urlResponse.statusCode)
+                }
+                var codes: String = ""
+                if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String : Any] {
+                    if let name = json["code"] as? String {
+                        codes = name
+                    }
+                }
+                return codes
+            }
+            .eraseToAnyPublisher()
     }
 }

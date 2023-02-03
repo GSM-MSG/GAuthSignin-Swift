@@ -1,17 +1,19 @@
 import Foundation
+import Combine
 
 enum UserAPIEnum {
     case user(accessToken: String)
 }
 
-struct UserAPI {
+@available(iOS 13.0, *)
+class UserAPI {
     let baseURL: String = "https://open.gauth.co.kr/"
     let user: UserAPIEnum
 
     init(user: UserAPIEnum) {
         self.user = user
     }
-
+    
     var urlPath: String {
         switch user {
         case .user:
@@ -25,7 +27,6 @@ struct UserAPI {
         }
     }
 
-    @available(iOS 13.0, *)
     func authorization() async -> UserInfoDTO {
         var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
         urlRequest.httpMethod = "GET"
@@ -35,16 +36,36 @@ struct UserAPI {
     }
 
     func authorizationTask(urlRequest: URLRequest) async throws -> UserInfoDTO {
-        if #available(iOS 13.0, *) {
-            let (data, response) = try await URLSession.shared.data(for: urlRequest)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                print((response as? HTTPURLResponse)?.statusCode)
-                throw GAuthError.unknown
-            }
-            let res = try JSONDecoder().decode(UserInfoDTO.self, from: data)
-            return res
-        } else {
-            return .init(email: "", gender: "", role: "")
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw GAuthError.unknown
         }
+        let res = try JSONDecoder().decode(UserInfoDTO.self, from: data)
+        return res
+    }
+
+    var datas: UserInfoDTO = .init(email: "", gender: "", role: "")
+    func authorizationTask() -> AnyPublisher<UserInfoDTO, Error> {
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = "GET"
+        urlRequest.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .mapError { error -> Error in
+                return GAuthError.unknown
+            }
+            .tryMap { (data, response) -> (data: Data, response: URLResponse) in                
+                guard let urlResponse = response as? HTTPURLResponse else {
+                    throw GAuthError.unknown
+                }
+                if (200..<300) ~= urlResponse.statusCode {
+                }
+                else {
+                    print(urlResponse.statusCode)
+                }
+                return (data, response)
+            }
+            .map(\.data)
+            .decode(type: UserInfoDTO.self, decoder: JSONDecoder())
+            .eraseToAnyPublisher()
     }
 }

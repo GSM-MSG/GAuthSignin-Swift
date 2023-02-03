@@ -1,6 +1,6 @@
 import Foundation
 
-public struct UserInfoDTO: Decodable, Encodable {
+public struct UserInfoDTO: Codable {
     public var email: String
     public var name: String?
     public var grade: Int?

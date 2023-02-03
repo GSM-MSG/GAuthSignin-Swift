@@ -90,7 +90,6 @@ open class GAuthSigninButton: UIView {
             if #available(iOS 13.0, *) {
                 button.layer.borderColor = CGColor(red: 46/255, green: 128/255, blue: 204/255, alpha: 1)
             } else {
-                // Fallback on earlier versions
             }
         }
         button.layer.cornerRadius = rounded == .rounded ? 24.75 : 6
@@ -126,10 +125,6 @@ public struct GAuthSignin {
 
 @available(iOS 13.0, macOS 10.15, *)
 extension Bundle {
-    /// Gets the bundle for the SDK framework.
-    /// - returns An optional instance of `Bundle`.
-    /// - note If the main `Bundle` cannot be found, or if the `Bundle` cannot be
-    /// found via a class, then this will return nil.
     static func gidFrameworkBundle() -> Bundle? {
         if let mainPath = Bundle.main.path(
             forResource: "GauthSignin",
@@ -139,11 +134,7 @@ extension Bundle {
         }
         return nil
     }
-        
-        /// Retrieves the Google icon URL from the bundle.
-        /// - parameter name: The `String` name for the resource to look up.
-        /// - parameter ext: The `String` extension for the resource to look up.
-        /// - returns An optional `URL` if the resource is found, nil otherwise.
+
         static func urlForGoogleResource(
             name: String,
             withExtension ext: String
@@ -155,10 +146,7 @@ extension Bundle {
     
 @available(iOS 13.0, macOS 10.15, *)
 private extension UIFont {
-  /// Load the font for the button.
-  /// - returns A `Bool` indicating whether or not the font was loaded.
   static func loadCGFont() -> Bool {
-    // Check to see if the font has already been loaded
 #if os(iOS) || targetEnvironment(macCatalyst)
     if let _ = UIFont(name: "Pretendard-SemiBold", size: 17) {
       return true
