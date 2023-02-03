@@ -35,6 +35,15 @@ class UserAPI {
         return token ?? .init(email: "", gender: "", role: "")
     }
 
+    func authorization(_ completion: @escaping (UserInfoDTO) -> Void) {
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = "GET"
+        urlRequest.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        authorizationTask(urlRequest: urlRequest) { response in
+            completion(response)
+        }
+    }
+
     func authorizationTask(urlRequest: URLRequest) async throws -> UserInfoDTO {
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
@@ -44,7 +53,26 @@ class UserAPI {
         return res
     }
 
-    var datas: UserInfoDTO = .init(email: "", gender: "", role: "")
+    func authorizationTask(urlRequest: URLRequest, _ completion: @escaping (UserInfoDTO) -> Void) {
+        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    do {
+                        let res = try JSONDecoder().decode(UserInfoDTO.self, from: data!)
+
+                        completion(res)
+                    } catch let error {
+                        print(error.localizedDescription)
+                    }
+                }
+            }
+            .resume()
+    }
+
     func authorizationTask() -> AnyPublisher<UserInfoDTO, Error> {
         var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
         urlRequest.httpMethod = "GET"

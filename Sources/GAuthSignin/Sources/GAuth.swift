@@ -25,6 +25,17 @@ public class GAuth {
         return data
     }
 
+    public func getGAuthTokenResponseClosure(code: String,
+                                             clientId: String,
+                                             clientSecret: String,
+                                             redirectUri: String,
+                                             completion: @escaping (TokenDTO) -> Void
+    ) {
+        OAuthAPI(user: .token(.init(code: code, clientId: clientId, clientSecret: clientSecret, redirectUri: redirectUri))).getToken() { response in
+            completion(response)
+        }
+    }
+
     public func getGAuthCodeResponse(
         email: String,
         password: String
@@ -36,6 +47,12 @@ public class GAuth {
     public func getGAuthCodeResponsePublisher(email: String, password: String) -> AnyPublisher<String, Error> {
         let code = OAuthAPI(user: .code(.init(email: email, password: password))).getCode()
         return code
+    }
+
+    public func getGAuthCodeResponseClosure(email: String, password: String, completion: @escaping (String) -> Void) {
+        OAuthAPI(user: .code(.init(email: email, password: password))).getCode { code in
+            completion(code)
+        }
     }
 
     public func patchGAuthTokenResponse(
@@ -50,6 +67,12 @@ public class GAuth {
         return data
     }
 
+    public func patchGAuthTokenResponseClosure(refreshToken: String, completion: @escaping (TokenDTO) -> Void) {
+        OAuthAPI(user: .refresh(refreshToken: refreshToken)).reissuance() { response in
+            completion(response)
+        }
+    }
+
     public func getGAuthUserInfoResponse(
         accessToken: String
     ) async throws -> UserInfoDTO {
@@ -60,5 +83,11 @@ public class GAuth {
     public func getGAuthUserInfoResponsePublisher(accessToken: String) -> AnyPublisher<UserInfoDTO, Error> {
         let data = UserAPI(user: .user(accessToken: accessToken)).authorizationTask()
         return data
+    }
+
+    public func getGAuthUserInfoResponseClosure(accessToken: String, completion: @escaping (UserInfoDTO) -> Void) {
+        UserAPI(user: .user(accessToken: accessToken)).authorization { response in
+            completion(response)
+        }
     }
 }

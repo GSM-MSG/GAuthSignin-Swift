@@ -129,6 +129,17 @@ struct OAuthAPI {
         return reissuanceTask(urlRequest: urlRequest)
     }
 
+    func reissuance(_ completion: @escaping (TokenDTO) -> Void) {
+        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = httpMethod
+        urlRequest.httpBody = jsonData
+        urlRequest.setValue("Bearer " + token, forHTTPHeaderField: "refreshToken")
+        return reissuanceTask(urlRequest: urlRequest) { response in
+            completion(response)
+        }
+    }
+
     func getCode() -> AnyPublisher<String, Error> {
         let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
         var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
@@ -138,6 +149,17 @@ struct OAuthAPI {
         return codeTask(urlRequest: urlRequest)
     }
 
+    func getCode(_ completion: @escaping (String) -> Void) {
+        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = httpMethod
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = jsonData
+        return codeTask(urlRequest: urlRequest) { response in
+            completion(response)
+        }
+    }
+
     func getToken() -> AnyPublisher<TokenDTO, Error> {
         let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
         var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
@@ -145,6 +167,17 @@ struct OAuthAPI {
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = jsonData
         return tokenTask(urlRequest: urlRequest)
+    }
+
+    func getToken(_ completion: @escaping (TokenDTO) -> Void) {
+        let jsonData = try? JSONSerialization.data(withJSONObject: json, options: [])
+        var urlRequest = URLRequest(url: (URL(string: baseURL + urlPath) ?? URL(string: ""))!)
+        urlRequest.httpMethod = httpMethod
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = jsonData
+        return tokenTask(urlRequest: urlRequest) { response in
+            completion(response)
+        }
     }
 
     func reissuanceTask(urlRequest: URLRequest) -> AnyPublisher<TokenDTO, Error> {
@@ -168,6 +201,26 @@ struct OAuthAPI {
             .eraseToAnyPublisher()
     }
 
+    func reissuanceTask(urlRequest: URLRequest, _ completion: @escaping (TokenDTO) -> Void) {
+        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    do {
+                        let res = try JSONDecoder().decode(TokenDTO.self, from: data!)
+
+                        completion(res)
+                    } catch let error {
+                        print(error.localizedDescription)
+                    }
+                }
+            }
+            .resume()
+    }
+
     func tokenTask(urlRequest: URLRequest) -> AnyPublisher<TokenDTO, Error> {
         return URLSession.shared.dataTaskPublisher(for: urlRequest)
             .mapError { error -> Error in
@@ -187,6 +240,26 @@ struct OAuthAPI {
             .map(\.data)
             .decode(type: TokenDTO.self, decoder: JSONDecoder())
             .eraseToAnyPublisher()
+    }
+
+    func tokenTask(urlRequest: URLRequest, _ completion: @escaping (TokenDTO) -> Void) {
+        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    do {
+                        let res = try JSONDecoder().decode(TokenDTO.self, from: data!)
+
+                        completion(res)
+                    } catch let error {
+                        print(error.localizedDescription)
+                    }
+                }
+            }
+            .resume()
     }
 
     func codeTask(urlRequest: URLRequest) -> AnyPublisher<String, Error> {
@@ -212,5 +285,30 @@ struct OAuthAPI {
                 return codes
             }
             .eraseToAnyPublisher()
+    }
+
+    func codeTask(urlRequest: URLRequest, _ completion: @escaping (String) -> Void) {
+        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    do {
+                        var codes: String = ""
+                        if let json = try? JSONSerialization.jsonObject(with: data!, options: []) as? [String : Any] {
+                            if let name = json["code"] as? String {
+                                codes = name
+                            }
+                        }
+
+                        completion(codes)
+                    } catch let error {
+                        print(error.localizedDescription)
+                    }
+                }
+            }
+            .resume()
     }
 }
