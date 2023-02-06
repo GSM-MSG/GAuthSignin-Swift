@@ -1,6 +1,6 @@
 import Foundation
 
-struct ServiceInfoDTO: Encodable, Decodable {
+struct ServiceInfoRequestDTO: Encodable, Decodable {
     let code: String
     let clientId: String
     let clientSecret: String

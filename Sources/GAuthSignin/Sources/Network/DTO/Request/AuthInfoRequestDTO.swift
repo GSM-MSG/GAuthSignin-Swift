@@ -1,6 +1,6 @@
 import Foundation
 
-struct AuthInfoDTO {
+struct AuthInfoRequestDTO {
     let email: String
     let password: String
 }
