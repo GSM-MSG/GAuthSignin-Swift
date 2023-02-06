@@ -5,7 +5,6 @@ enum UserAPIEnum {
     case user(accessToken: String)
 }
 
-@available(iOS 13.0, *)
 class UserAPI {
     let baseURL: String = "https://open.gauth.co.kr/"
     let user: UserAPIEnum

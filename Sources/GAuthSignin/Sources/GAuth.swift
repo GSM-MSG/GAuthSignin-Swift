@@ -1,7 +1,6 @@
 import Foundation
 import Combine
 
-@available(iOS 13.0, *)
 public class GAuth {
     public init() {}
 

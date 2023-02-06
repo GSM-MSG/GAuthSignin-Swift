@@ -7,7 +7,6 @@ enum OAuthEnum {
     case refresh(refreshToken: String)
 }
 
-@available(iOS 13.0, *)
 struct OAuthAPI {
     let baseURL: String = "https://server.gauth.co.kr/oauth/"
     let user: OAuthEnum
