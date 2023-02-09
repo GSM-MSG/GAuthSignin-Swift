@@ -64,8 +64,8 @@ final class GAuthSigninWebViewController: UIViewController, WKNavigationDelegate
         let urlString = navigationAction.request.url?.absoluteString ?? ""
         if urlString.contains("code=") {
             DispatchQueue.main.async {
-                self.dismiss(animated: true) {
-                    self.completion(urlString.components(separatedBy: "code=")[1])
+                self.dismiss(animated: true) { [weak self] in
+                    self?.completion(urlString.components(separatedBy: "code=")[1])
                 }
             }
         }
